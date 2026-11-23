@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------
+   Design tokens. Light = "lab bench" (cool mist + glass-teal),
+   Dark = "instrument panel". Every colour in the UI comes from here.
+   --------------------------------------------------------------- */
+:root {
+  --bg: #edf1f0;
+  --surface: #ffffff;
+  --surface-2: #f5f8f7;
+  --line: #d9e1de;
+  --line-strong: #bfcac6;
+  --ink: #0f1c1a;
+  --muted: #566763;
+  --primary: #0e6b5f;
+  --primary-hover: #0b574d;
+  --on-primary: #ffffff;
+  --primary-soft: #d6ece7;
+  --amber: #e7a11a;
+  --amber-soft: #fbecc9;
+  --ok: #1d8a4b;
+  --warn: #b97a06;
+  --bad: #c4382f;
+  --info: #3f66a0;
+  --focus: #0e6b5f;
+  --ribbon-class: #8aa0c4;
+  color-scheme: light;
+}
+[data-theme="dark"] {
+  --bg: #0b1312;
+  --surface: #121d1b;
+  --surface-2: #162522;
+  --line: #243632;
+  --line-strong: #345048;
+  --ink: #e5edeb;
+  --muted: #8ea39e;
+  --primary: #45c8b3;
+  --primary-hover: #66d6c4;
+  --on-primary: #05221d;
+  --primary-soft: #123a34;
+  --amber: #f0b03a;
+  --amber-soft: #3b2f12;
+  --ok: #4cc785;
+  --warn: #f0b03a;
+  --bad: #ef6b60;
+  --info: #7fa3de;
+  --focus: #66d6c4;
+  --ribbon-class: #4d6288;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --color-info: var(--info);
+  --font-display: "Bricolage Grotesque", "Public Sans", system-ui, sans-serif;
+  --font-sans: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius-card: 14px;
+  --radius-ctl: 9px;
+}
+
+html { background: var(--bg); }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font-sans); font-size: 15px; line-height: 1.55;
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  font-feature-settings: "tnum" 1;
+}
+h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.02em; line-height: 1.12; margin: 0; font-weight: 600; text-wrap: balance; }
+p { margin: 0; text-wrap: pretty; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+::selection { background: var(--primary-soft); color: var(--ink); }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+
+/* Availability ribbon: the product's signature visual. Booked = solid, class = hatched, maintenance = warning stripes. */
+.rb-booked { background: var(--primary); }
+.rb-pending { background: var(--amber); }
+.rb-mine { background: var(--ink); }
+.rb-class { background: repeating-linear-gradient(135deg, var(--ribbon-class) 0 4px, color-mix(in srgb, var(--ribbon-class) 55%, var(--surface)) 4px 8px); }
+.rb-maint { background: repeating-linear-gradient(-45deg, var(--bad) 0 4px, color-mix(in srgb, var(--bad) 30%, var(--surface)) 4px 8px); }
+.rb-pick { background: color-mix(in srgb, var(--primary) 22%, transparent); outline: 2px dashed var(--primary); outline-offset: -2px; }
+
+.scroll-thin { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+@media print {
+  aside, header, .no-print { display: none !important; }
+  body { background: #fff; }
+}

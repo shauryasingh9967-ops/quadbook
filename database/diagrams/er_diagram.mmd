@@ -1,0 +1,104 @@
+erDiagram
+    roles ||--o{ users : "has"
+    departments ||--o{ users : "belongs to"
+    departments ||--o{ resources : "manages"
+    buildings ||--o{ rooms : "contains"
+    rooms ||--o{ resources : "houses"
+    resource_categories ||--o{ resources : "classifies"
+    resources ||--o{ equipment : "holds"
+    resources ||--o{ academic_schedules : "timetabled in"
+    resources ||--o{ bookings : "is booked by"
+    resources ||--o{ maintenance_requests : "needs"
+    users ||--o{ bookings : "requests"
+    users ||--o{ academic_schedules : "teaches"
+    users ||--o{ notifications : "receives"
+    users ||--o{ password_reset_tokens : "owns"
+    users ||--o{ maintenance_requests : "reports / is assigned"
+    bookings ||--o| booking_approvals : "decided by"
+    bookings ||--o{ booking_status_history : "logs"
+    bookings ||--o{ booking_equipment : "includes"
+    equipment ||--o{ booking_equipment : "requested in"
+    bookings ||--o{ notifications : "triggers"
+    maintenance_requests ||--o{ notifications : "triggers"
+
+    roles { tinyint id PK
+            varchar name UK }
+    departments { smallint id PK
+                  varchar code UK
+                  varchar name UK }
+    buildings { smallint id PK
+                varchar code UK
+                varchar name }
+    rooms { int id PK
+            smallint building_id FK
+            varchar room_number
+            smallint capacity }
+    resource_categories { tinyint id PK
+                          varchar name UK
+                          enum kind }
+    users { int id PK
+            tinyint role_id FK
+            smallint department_id FK
+            varchar email UK
+            varchar member_id UK
+            varchar password_hash
+            enum status }
+    resources { int id PK
+                varchar code UK
+                tinyint category_id FK
+                int room_id FK
+                smallint department_id FK
+                smallint capacity
+                enum status
+                tinyint requires_approval }
+    equipment { int id PK
+                int resource_id FK
+                varchar asset_tag UK
+                smallint quantity_total
+                tinyint bookable_addon }
+    academic_schedules { int id PK
+                         int resource_id FK
+                         int faculty_id FK
+                         tinyint day_of_week
+                         time start_time
+                         time end_time }
+    bookings { bigint id PK
+               varchar booking_code UK
+               int resource_id FK
+               int user_id FK
+               datetime start_time
+               datetime end_time
+               enum status }
+    booking_equipment { bigint booking_id PK, FK
+                        int equipment_id PK, FK
+                        smallint quantity }
+    booking_approvals { bigint id PK
+                        bigint booking_id FK, UK
+                        int admin_id FK
+                        enum decision }
+    booking_status_history { bigint id PK
+                             bigint booking_id FK
+                             varchar old_status
+                             varchar new_status }
+    maintenance_requests { int id PK
+                           int resource_id FK
+                           int reported_by FK
+                           int assigned_to FK
+                           enum priority
+                           enum status
+                           datetime starts_at
+                           datetime expected_end }
+    notifications { bigint id PK
+                    int user_id FK
+                    bigint booking_id FK
+                    int maintenance_id FK
+                    enum type
+                    tinyint is_read
+                    tinyint mongo_synced }
+    system_settings { varchar setting_key PK
+                      varchar setting_value }
+    password_reset_tokens { int id PK
+                            int user_id FK
+                            char token_hash UK }
+    revoked_tokens { char jti PK
+                     datetime expires_at }

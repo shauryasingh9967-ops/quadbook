@@ -1,6 +1,7 @@
 import mysql, { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
+import { mysqlSslOptions } from './ssl';
 
 let pool: Pool | null = null;
 
@@ -15,8 +16,9 @@ export function getPool(): Pool {
       waitForConnections: true,
       connectionLimit: 20,
       // Hosted MySQL services (Railway, Aiven, Clever Cloud) usually require TLS.
-      // DB_SSL=true enables it; rejected when the server certificate does not verify.
-      ssl: env.DB_SSL === 'true' ? { rejectUnauthorized: true } : undefined,
+      // DB_SSL=true enables it; the bundled Aiven CA (backend/certs/aiven-ca.pem)
+      // is used to verify the server certificate when present.
+      ssl: mysqlSslOptions(),
       dateStrings: true,       // DATETIME stays a plain string -> no timezone surprises
       decimalNumbers: true,    // DECIMAL / ROUND() come back as numbers
       charset: 'utf8mb4',

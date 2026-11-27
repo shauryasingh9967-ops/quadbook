@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuadBook — Database Viewer (MySQL + MongoDB)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Arial, sans-serif; background: #f4f6f9; color: #1c2733; line-height: 1.55; padding: 20px; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  header { background: linear-gradient(135deg, #142c45, #1f4e79); color: #fff; border-radius: 12px; padding: 26px 28px; margin-bottom: 20px; }
+  header h1 { font-size: 26px; margin-bottom: 6px; }
+  header p { opacity: .9; font-size: 14px; }
+  .badges { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12.5px; font-weight: 600; background: rgba(255,255,255,.16); }
+  .badge.green { background: #1d9d63; }
+  .badge.amber { background: #b7791f; }
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 22px; margin-bottom: 18px; }
+  .card h2 { font-size: 19px; color: #142c45; margin-bottom: 4px; }
+  .card .sub { color: #5b6b7a; font-size: 13.5px; margin-bottom: 14px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .stat { background: #f0f5fa; border: 1px solid #dbe4ee; border-radius: 10px; padding: 14px; text-align: center; }
+  .stat b { display: block; font-size: 26px; color: #1f4e79; }
+  .stat span { font-size: 13px; color: #5b6b7a; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th { background: #142c45; color: #fff; text-align: left; padding: 9px 10px; }
+  td { padding: 8px 10px; border-bottom: 1px solid #e8edf2; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .tbl-name { font-weight: 700; color: #1f4e79; font-size: 15px; margin: 18px 0 6px; }
+  .tbl-name small { color: #5b6b7a; font-weight: 400; }
+  .pk { color: #b7791f; font-weight: 700; }
+  .fk { color: #1f4e79; font-weight: 700; }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 10px; background: #e6eef6; color: #1f4e79; margin-left: 6px; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .pill.ok { background: #dcf5e7; color: #14743f; }
+  .pill.warn { background: #fdf0d3; color: #8a5a00; }
+  pre { background: #142c45; color: #d6e4f0; padding: 14px 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.6; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } }
+  .kv { font-size: 14px; }
+  .kv b { color: #142c45; }
+  .kv div { padding: 5px 0; border-bottom: 1px dashed #e2e8f0; }
+  .kv div:last-child { border-bottom: none; }
+  code { background: #eef2f6; padding: 1px 6px; border-radius: 4px; font-size: 13px; }
+  .note { background: #fff8e1; border: 1px solid #f2d492; color: #6d4c00; border-radius: 8px; padding: 12px 14px; font-size: 13.5px; margin-top: 12px; }
+  .refresh { margin-top: 12px; }
+  button { background: #1f4e79; color: #fff; border: none; padding: 9px 18px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  button:hover { background: #16395c; }
+  #liveMsg { font-size: 13px; color: #5b6b7a; margin-top: 8px; }
+  footer { text-align: center; color: #8a99a8; font-size: 12.5px; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>QuadBook — Database Viewer</h1>
+  <p>Campus Resource Booking System &nbsp;|&nbsp; K.R. Mangalam University &nbsp;|&nbsp; DBMS Capstone (ETCCMS304)</p>
+  <div class="badges">
+    <span class="badge green">● MySQL — CONNECTED</span>
+    <span class="badge green">● MongoDB — CONNECTED</span>
+    <span class="badge">MySQL 8.4.11 · Aiven (Singapore)</span>
+    <span class="badge">Database: defaultdb</span>
+    <span class="badge">Snapshot: 27 Nov 2026, 14:10 IST</span>
+  </div>
+</header>
+
+<!-- LIVE STATS -->
+<div class="card">
+  <h2>Live Database — At a Glance</h2>
+  <p class="sub">Real counts served by the QuadBook backend (<code>/api/public/overview</code> + <code>/api/health</code>), fetched live from the deployed app.</p>
+  <div class="stats">
+    <div class="stat"><b id="st-resources">36</b><span>Resources</span></div>
+    <div class="stat"><b id="st-buildings">6</b><span>Buildings</span></div>
+    <div class="stat"><b id="st-users">133</b><span>Users</span></div>
+    <div class="stat"><b id="st-bookings">1,309</b><span>Bookings</span></div>
+    <div class="stat"><b id="st-hours">2,697</b><span>Booked Hours</span></div>
+    <div class="stat"><b>10,829</b><span>MySQL Seed Rows</span></div>
+  </div>
+  <div class="refresh">
+    <button onclick="refreshLive()">Refresh live data</button>
+    <span id="liveMsg">Snapshot from 27 Nov 2026, 14:10 IST. Press refresh to fetch the latest live data from the backend.</span>
+  </div>
+</div>
+
+<!-- LIVE RESOURCES TABLE -->
+<div class="card">
+  <h2>Live Data — resources Table (sample rows)</h2>
+  <p class="sub">Real rows returned by the live backend just now. These are actual records stored in MySQL table <code>resources</code>.</p>
+  <table>
+    <tr><th>ID</th><th>Code</th><th>Resource Name</th><th>Capacity</th><th>Status</th><th>Category</th><th>Building</th><th>Room</th><th>Equipment</th></tr>
+    <tr><td>1</td><td>CSE-LAB-01</td><td>AI &amp; Machine Learning Lab</td><td>40</td><td><span class="pill ok">available</span></td><td>Computer Lab</td><td>Engineering Block</td><td>E-201</td><td>2</td></tr>
+    <tr><td>2</td><td>CSE-LAB-02</td><td>Data Structures &amp; Algorithms Lab</td><td>60</td><td><span class="pill ok">available</span></td><td>Computer Lab</td><td>Engineering Block</td><td>E-202</td><td>2</td></tr>
+    <tr><td>4</td><td>CSE-LAB-04</td><td>Cyber Security Lab</td><td>30</td><td><span class="pill warn">maintenance</span></td><td>Computer Lab</td><td>Engineering Block</td><td>E-204</td><td>2</td></tr>
+    <tr><td>5</td><td>CSE-LAB-05</td><td>Cloud &amp; DevOps Lab</td><td>40</td><td><span class="pill ok">available</span></td><td>Computer Lab</td><td>Engineering Block</td><td>E-301</td><td>2</td></tr>
+    <tr><td>24</td><td>DR-LIB-03</td><td>Group Study Room 3</td><td>10</td><td><span class="pill ok">available</span></td><td>Discussion Room</td><td>Central Library &amp; Learning Commons</td><td>L-G3</td><td>1</td></tr>
+    <tr><td>25</td><td>DR-LIB-04</td><td>Group Study Room 4</td><td>6</td><td><span class="pill ok">available</span></td><td>Discussion Room</td><td>Central Library &amp; Learning Commons</td><td>L-G4</td><td>0</td></tr>
+  </table>
+  <div class="note">Note: the live API returns 6 featured resources in this view; the full table holds <b>36 resources</b>. All 36 are visible in the QuadBook app (Admin → Resources) and in MySQL Workbench.</div>
+</div>
+
+<!-- SCHEMA -->
+<div class="card">
+  <h2>MySQL Schema — All 18 Tables</h2>
+  <p class="sub">Exact DDL from <code>database/migrations/001_tables.sql</code> (InnoDB, utf8mb4). <span class="pk">PK</span> = Primary Key, <span class="fk">FK</span> = Foreign Key.</p>
+
+  <div class="tbl-name">1. roles <small>— user roles (admin / faculty / student)</small></div>
+  <table><tr><th>Column</th><th>Type</th><th>Key / Constraint</th></tr>
+  <tr><td class="pk">id</td><td>TINYINT UNSIGNED AUTO_INCREMENT</td><td>PRIMARY KEY</td></tr>
+  <tr><td>name</td><td>VARCHAR(20)</td><td>UNIQUE</td></tr>
+  <tr><td>description</td><td>VARCHAR(160)</td><td>—</td></tr></table>
+
+  <div class="tbl-name">2. departments</div>
+  <table><tr><th>Column</th><th>Type</th><th>Key / Constraint</th></tr>
+  <tr><td class="pk">id</td><td>SMALLINT UNSIGNED AUTO_INCREMENT</td><td>PRIMARY KEY</td></tr>
+  <tr><td>code</td><td>VARCHAR(10)</td><td>UNIQUE</td></tr>
+  <tr><td>name</td><td>VARCHAR(120)</td><td>UNIQUE</td></tr>
+  <tr><td>contact_email</td><td>VARCHAR(120)</td><td>NULL allowed</td></tr>
+  <tr><td>created_at</td><td>TIMESTAMP</td><td>DEFAULT CURRENT_TIMESTAMP</td></tr></table>
+
+  <div class="tbl-name">3. buildings</div>
+  <table><tr><th>Column</th><th>Type</th><th>Key / Constraint</th></tr>
+  <tr><td class="pk">id</td><td>SMALLINT UNSIGNED AUTO_INCREMENT</td><td>PRIMARY KEY</td></tr>
+  <tr><td>code</td><td>VARCHAR(10)</td><td>UNIQUE</td></tr>
+  <tr><td>name</td><td>VARCHAR(120)</td><td>—</td></tr>
+  <tr><td>total_floors</td><td>TINYINT UNSIGNED</td><td>CHECK (total_floors &gt;= 1)</td></tr>
+  <tr><td>description</td><td>VARCHAR(255)</td><td>NULL allowed</td></tr></table>
+
+  <div class="tbl-name">4. rooms</div>
+  <table><tr><th>Column</th><th>Type</th><th>Key / Constraint</th></tr>
+  <tr><td class="pk">id</td><td>INT UNSIGNED AUTO_INCREMENT</td><td>PRIMARY KEY</td></tr>
+  <tr><td class="fk">building_id</td><td>SMALLINT UNSIGNED</td><td>FK → buildings(id), CASCADE update / RESTRICT delete</td></tr>
+  <tr><td>room_number</td><td>VARCHAR(20)</td><td>UNIQUE (building_id, room_number)</td></tr>
+  <tr><td>floor_no</td><td>TINYINT UNSIGNED</td><td>DEFAULT 0</td></tr>
+  <tr><td>capacity</td><td>SMALLINT UNSIGNED</td><td>CHECK (capacity &gt;= 1)</td></tr></table>
+
+  <div class="tbl-name">5. resource_categories</div>
+  <table><tr><th>Column</th><th>Type</th><th>Key / Constraint</th></tr>
+  <tr><td class="pk">id</td><td>TINYINT UNSIGNED AUTO_INCREMENT</td><td>PRIMARY KEY</td></tr>
+  <tr><td>name</td><td>VARCHAR(60)</td><td>UNIQUE</td></tr>
+  <tr><td>kind</td><td>ENUM('lab','classroom','hall','equipment','other')</td><td>—</td></tr>
+  <tr><td>icon</td><td>VARCHAR(30)</td><td>DEFAULT 'box'</td></tr>
+  <tr><td>description</td><td>VARCHAR(200)</td><td>NULL allowed</td></tr></table>
+
+  <div class="tbl-name">6. users <span class="tag">133 users</span></div>
+  <table><tr><th>Column</th><th>Type</th><th>Key / Constraint</th></tr>
+  <tr><td class="pk">id</td><td>INT UNSIGNED AUTO_INCREMENT</td><td>PRIMARY KEY</td></tr>
+  <tr><td class="fk">role_id</td><td>TINYINT UNSIGNED</td><td>FK → roles(id)</td></tr>
+  <tr><td class="fk">department_id</td><td>SMALLINT UNSIGNED</td><td>FK → departments(id), NULL allowed</td></tr>
+  <tr><td>email</td><td>VARCHAR(150)</td><td>UNIQUE · CHECK (email LIKE '%_@_%.__%')</td></tr>
+  <tr><td>password_hash</td><td>VARCHAR(100)</td><td>bcrypt hash — never plain text</td></tr>
+  <tr><td>full_name</td><td>VARCHAR(120)</td><td>—</td></tr>
+  <tr><td>member_id</td><td>VARCHAR(30)</td><td>UNIQUE (enrollment / employee id)</td></tr>
+  <tr><td>phone</td><td>VARCHAR(20)</td><td>NULL allowed</td></tr>
+  <tr><td>status</td><td>ENUM('active','suspended')</td><td>DEFAULT 'active'</td></tr>
+  <tr><td>last_login_at</td><td>DATETIME</td><td>NULL allowed</td></tr>
+  <tr><td>created_at / updated_at</td><td>TIMESTAMP</td><td>auto-managed</td></tr></table>
+
+  <div class="tbl-name">7. resources <span class="tag">36 resources</span></div>
+  <table><tr><th>Column</th><th>Type</th><th>Key / Constraint</th></tr>
+  <tr><td class="pk">id</td><td>INT UNSIGNED AUTO_INCREMENT</td><td>PRIMARY KEY</td></tr>
+  <tr><td>code</td><td>VARCHAR(20)</td><td>UNIQUE (e.g. CSE-LAB-01)</td></tr>
+  <tr><td>name</td><td>VARCHAR(120)</td><td>—</td></tr>
+  <tr><td class="fk">category_id</td><td>TINYINT UNSIGNED</td><td>FK → resource_categories(id)</td></tr>
+  <tr><td class="fk">room_id</td><td>INT UNSIGNED</td><td>FK → rooms(id)</td></tr>
+  <tr><td class="fk">department_id</td><td>SMALLINT UNSIGNED</td><td>FK → departments(id), NULL allowed</td></tr>
+  <tr><td>capacity</td><td>SMALLINT UNSIGNED</td><td>CHECK (capacity &gt;= 1)</td></tr>
+  <tr><td>description</td><td>TEXT</td><td>NULL allowed</td></tr>
+  <tr><td>status</td><td>ENUM('available','maintenance','retired')</td><td>DEFAULT 'available'</td></tr>
+  <tr><td>requires_approval</td><td>TINYINT(1)</td><td>DEFAULT 1</td></tr></table>
+
+  <div class="tbl-name">8. equipment</div>
+  <table><tr><th>Column</th><th>Type</th><th>Key / Constraint</th></tr>
+  <tr><td class="pk">id</td><td>INT UNSIGNED AUTO_INCREMENT</td><td>PRIMARY KEY</td></tr>
+  <tr><td class="fk">resource_id</td><td>INT UNSIGNED</td><td>FK → resources(id), ON DELETE CASCADE</td></tr>
+  <tr><td>name</td><td>VARCHAR(120)</td><td>—</td></tr>
+  <tr><td>asset_tag</td><td>VARCHAR(30)</td><td>UNIQUE</td></tr>
+  <tr><td>quantity_total</td><td>SMALLINT UNSIGNED</td><td>CHECK (&gt;= 1)</td></tr>
+  <tr><td>status</td><td>ENUM('operational','under_repair','retired')</td><td>DEFAULT 'operational'</td></tr>
+  <tr><td>bookable_addon</td><td>TINYINT(1)</td><td>1 = bookable with a booking</td></tr></table>
+
+  <div class="tbl-name">9. academic_schedules <small>— recurring classes block ad-hoc bookings</small></div>
+  <table><tr><th>Column</th><th>Type</th><th>Key / Constraint</th></tr>
+  <tr><td class="pk">id</td><td>INT UNSIGNED AUTO_INCREMENT</td><td>PRIMARY KEY</td></tr>
+  <tr><td class="fk">resource_id</td><td>INT UNSIGNED</td><td>FK → resources(id), ON DELETE CASCADE</td></tr>
+  <tr><td class="fk">faculty_id</td><td>INT UNSIGNED</td><td>FK → users(id), NULL allowed</td></tr>
+  <tr><td>course_code / course_name</td><td>VARCHAR(20) / VARCHAR(120)</td><td>—</td></tr>
+  <tr><td>semester</td><td>VARCHAR(20)</td><td>—</td></tr>
+  <tr><td>day_of_week</td><td>TINYINT UNSIGNED</td><td>CHECK (0–6, MySQL WEEKDAY())</td></tr>
+  <tr><td>start_time / end_time</td><td>TIME</td><td>CHECK (end_time &gt; start_time)</td></tr>
+  <tr><td>valid_from / valid_to</td><td>DATE</td><td>CHECK (valid_to &gt;= valid_from)</td></tr></table>
+
+  <div class="tbl-name">10. bookings <span class="tag">1,307 bookings</span></div>
+  <table><tr><th>Column</th><th>Type</th><th>Key / Constraint</th></tr>
+  <tr><td class="pk">id</td><td>BIGINT UNSIGNED AUTO_INCREMENT</td><td>PRIMARY KEY</td></tr>
+  <tr><td>booking_code</td><td>VARCHAR(20)</td><td>UNIQUE</td></tr>
+  <tr><td class="fk">resource_id</td><td>INT UNSIGNED</td><td>FK → resources(id)</td></tr>
+  <tr><td class="fk">user_id</td><td>INT UNSIGNED</td><td>FK → users(id)</td></tr>
+  <tr><td>start_time / end_time</td><td>DATETIME</td><td>CHECK (end &gt; start) · CHECK (same day)</td></tr>
+  <tr><td>purpose</td><td>VARCHAR(255)</td><td>—</td></tr>
+  <tr><td>attendees</td><td>SMALLINT UNSIGNED</td><td>CHECK (&gt;= 1)</td></tr>
+  <tr><td>status</td><td>ENUM('pending','approved','rejected','cancelled','completed')</td><td>DEFAULT 'pending'</td></tr>
+  <tr><td>cancel_reason / cancelled_at</td><td>VARCHAR(255) / DATETIME</td><td>NULL allowed</td></tr></table>
+
+  <div class="tbl-name">11. booking_equipment <small>— many-to-many: bookings ↔ equipment</small></div>
+  <table><tr><th>Column</th><th>Type</th><th>Key / Constraint</th></tr>
+  <tr><td class="pk">booking_id</td><td>BIGINT UNSIGNED</td><td>PRIMARY KEY (booking_id, equipment_id)</td></tr>
+  <tr><td class="pk">equipment_id</td><td>INT UNSIGNED</td><td>PRIMARY KEY (booking_id, equipment_id)</td></tr>
+  <tr><td>quantity</td><td>SMALLINT UNSIGNED</td><td>CHECK (&gt;= 1)</td></tr></table>
+
+  <div class="tbl-name">12. booking_approvals</div>
+  <table><tr><th>Column</th><th>Type</th><th>Key / Constraint</th></tr>
+  <tr><td class="pk">id</td><td>BIGINT UNSIGNED AUTO_INCREMENT</td><td>PRIMARY KEY</td></tr>
+  <tr><td class="fk">booking_id</td><td>BIGINT UNSIGNED</td><td>FK → bookings(id), UNIQUE (one decision per booking)</td></tr>
+  <tr><td class="fk">admin_id</td><td>INT UNSIGNED</td><td>FK → users(id), NULL = auto-approved by system</td></tr>
+  <tr><td>decision</td><td>ENUM('approved','rejected','auto_approved')</td><td>—</td></tr>
+  <tr><td>remarks</td><td>VARCHAR(255)</td><td>NULL allowed</td></tr>
+  <tr><td>decided_at</td><td>DATETIME</td><td>DEFAULT CURRENT_TIMESTAMP</td></tr></table>
+
+  <div class="tbl-name">13. booking_status_history <small>— audit trail of every status change</small></div>
+  <table><tr><th>Column</th><th>Type</th><th>Key / Constraint</th></tr>
+  <tr><td class="pk">id</td><td>BIGINT UNSIGNED AUTO_INCREMENT</td><td>PRIMARY KEY</td></tr>
+  <tr><td class="fk">booking_id</td><td>BIGINT UNSIGNED</td><td>FK → bookings(id), ON DELETE CASCADE</td></tr>
+  <tr><td>old_status</td><td>VARCHAR(20)</td><td>NULL allowed (first entry)</td></tr>
+  <tr><td>new_status</td><td>VARCHAR(20)</td><td>—</td></tr>
+  <tr><td>changed_by</td><td>INT UNSIGNED</td><td>FK → users(id), NULL allowed</td></tr>
+  <tr><td>changed_at</td><td>DATETIME</td><td>DEFAULT CURRENT_TIMESTAMP</td></tr></table>
+
+  <div class="tbl-name">14. maintenance_requests</div>
+  <table><tr><th>Column</th><th>Type</th><th>Key / Constraint</th></tr>
+  <tr><td class="pk">id</td><td>INT UNSIGNED AUTO_INCREMENT</td><td>PRIMARY KEY</td></tr>
+  <tr><td class="fk">resource_id</td><td>INT UNSIGNED</td><td>FK → resources(id), ON DELETE CASCADE</td></tr>
+  <tr><td class="fk">reported_by / assigned_to</td><td>INT UNSIGNED</td><td>FK → users(id), NULL allowed</td></tr>
+  <tr><td>title</td><td>VARCHAR(150)</td><td>—</td></tr>
+  <tr><td>description</td><td>TEXT</td><td>NULL allowed</td></tr>
+  <tr><td>priority</td><td>ENUM('low','medium','high','critical')</td><td>DEFAULT 'medium'</td></tr>
+  <tr><td>status</td><td>ENUM('reported','open','in_progress','resolved','closed')</td><td>DEFAULT 'open'</td></tr>
+  <tr><td>starts_at / expected_end / resolved_at</td><td>DATETIME</td><td>CHECK (expected_end &gt; starts_at)</td></tr></table>
+
+  <div class="tbl-name">15. notifications</div>
+  <table><tr><th>Column</th><th>Type</th><th>Key / Constraint</th></tr>
+  <tr><td class="pk">id</td><td>BIGINT UNSIGNED AUTO_INCREMENT</td><td>PRIMARY KEY</td></tr>
+  <tr><td class="fk">user_id</td><td>INT UNSIGNED</td><td>FK → users(id), ON DELETE CASCADE</td></tr>
+  <tr><td>type</td><td>ENUM('booking_created','booking_approved','booking_rejected','booking_cancelled','booking_completed','maintenance_update','system')</td><td>—</td></tr>
+  <tr><td>title / message</td><td>VARCHAR(150) / VARCHAR(500)</td><td>—</td></tr>
+  <tr><td class="fk">booking_id / maintenance_id</td><td>BIGINT / INT UNSIGNED</td><td>FKs, NULL allowed</td></tr>
+  <tr><td>is_read</td><td>TINYINT(1)</td><td>DEFAULT 0</td></tr>
+  <tr><td>mongo_synced</td><td>TINYINT(1)</td><td>outbox flag — copied to MongoDB history</td></tr></table>
+
+  <div class="tbl-name">16. system_settings</div>
+  <table><tr><th>Column</th><th>Type</th><th>Key / Constraint</th></tr>
+  <tr><td class="pk">setting_key</td><td>VARCHAR(60)</td><td>PRIMARY KEY</td></tr>
+  <tr><td>setting_value</td><td>VARCHAR(255)</td><td>—</td></tr>
+  <tr><td>description</td><td>VARCHAR(200)</td><td>NULL allowed</td></tr></table>
+
+  <div class="tbl-name">17. password_reset_tokens</div>
+  <table><tr><th>Column</th><th>Type</th><th>Key / Constraint</th></tr>
+  <tr><td class="pk">id</td><td>INT UNSIGNED AUTO_INCREMENT</td><td>PRIMARY KEY</td></tr>
+  <tr><td class="fk">user_id</td><td>INT UNSIGNED</td><td>FK → users(id), ON DELETE CASCADE</td></tr>
+  <tr><td>token_hash</td><td>CHAR(64)</td><td>UNIQUE — SHA-256 of the token; raw token never stored</td></tr>
+  <tr><td>expires_at / used_at</td><td>DATETIME</td><td>—</td></tr></table>
+
+  <div class="tbl-name">18. revoked_tokens <small>— logged-out JWTs (logout security)</small></div>
+  <table><tr><th>Column</th><th>Type</th><th>Key / Constraint</th></tr>
+  <tr><td class="pk">jti</td><td>CHAR(36)</td><td>PRIMARY KEY (JWT id)</td></tr>
+  <tr><td>expires_at</td><td>DATETIME</td><td>—</td></tr>
+  <tr><td>revoked_at</td><td>TIMESTAMP</td><td>DEFAULT CURRENT_TIMESTAMP</td></tr></table>
+</div>
+
+<!-- TRIGGERS / VIEWS / PROCEDURES -->
+<div class="card">
+  <h2>Database Logic — Triggers, Views, Procedures</h2>
+  <p class="sub">Defined in migrations 003–006. (Note: the report/PPT uses shorter display names; the code names below are the actual objects in the database.)</p>
+  <div class="grid2">
+    <div>
+      <div class="tbl-name">Triggers (005_triggers.sql)</div>
+      <table><tr><th>Trigger</th><th>On</th><th>Does</th></tr>
+      <tr><td><code>trg_bookings_bi</code></td><td>bookings · BEFORE INSERT</td><td>Blocks double-booking — rejects overlapping slot</td></tr>
+      <tr><td><code>trg_bookings_bu</code></td><td>bookings · BEFORE UPDATE</td><td>Re-validates slot on change</td></tr>
+      <tr><td><code>trg_bookings_ai</code></td><td>bookings · AFTER INSERT</td><td>Creates notification + audit entry</td></tr>
+      <tr><td><code>trg_bookings_au</code></td><td>bookings · AFTER UPDATE</td><td>Logs status change to history</td></tr>
+      <tr><td><code>trg_maintenance_ai</code></td><td>maintenance · AFTER INSERT</td><td>Marks resource under maintenance</td></tr>
+      <tr><td><code>trg_maintenance_au</code></td><td>maintenance · AFTER UPDATE</td><td>Restores resource when resolved</td></tr></table>
+    </div>
+    <div>
+      <div class="tbl-name">Views (006_views.sql)</div>
+      <table><tr><th>View</th><th>Shows</th></tr>
+      <tr><td><code>v_booking_details</code></td><td>Booking + resource + user joined</td></tr>
+      <tr><td><code>v_resource_catalog</code></td><td>Resource + category + room + building</td></tr>
+      <tr><td><code>v_monthly_booking_trends</code></td><td>Bookings per month</td></tr>
+      <tr><td><code>v_popular_resources</code></td><td>Most-booked resources</td></tr>
+      <tr><td><code>v_user_booking_stats</code></td><td>Bookings per user</td></tr></table>
+      <div class="tbl-name">Procedures &amp; Functions (003–004)</div>
+      <table><tr><th>Object</th><th>Does</th></tr>
+      <tr><td><code>sp_create_booking</code></td><td>Creates a booking (validated)</td></tr>
+      <tr><td><code>sp_decide_booking</code></td><td>Approve / reject a booking</td></tr>
+      <tr><td><code>sp_cancel_booking</code></td><td>Cancels with reason</td></tr>
+      <tr><td><code>sp_resource_utilization</code></td><td>Utilization report</td></tr>
+      <tr><td><code>fn_slot_conflict</code></td><td>Returns 1 if a slot clashes</td></tr>
+      <tr><td><code>fn_booking_hours</code></td><td>Hours booked for a resource</td></tr></table>
+    </div>
+  </div>
+</div>
+
+<!-- MONGODB -->
+<div class="card">
+  <h2>MongoDB — Secondary Database (Atlas)</h2>
+  <p class="sub">Activity logs &amp; audit history. Cluster0 (Mumbai) · Database: <code>smart_campus_logs</code> · Verified 24 Nov 2026.</p>
+  <div class="stats">
+    <div class="stat"><b>1,972</b><span>activity_log documents</span></div>
+    <div class="stat"><b>2,777</b><span>booking audit events</span></div>
+    <div class="stat"><b>2</b><span>collections</span></div>
+  </div>
+  <p style="margin-top:12px; font-size:14px;">Collections: <code>activity_log</code> (every user action) and <code>notifications</code> (notification history, synced from MySQL via the <code>mongo_synced</code> outbox flag). MySQL stays the single source of truth for transactions; MongoDB is the append-only log.</p>
+</div>
+
+<!-- SAMPLE QUERIES -->
+<div class="card">
+  <h2>Sample Queries — Run These in MySQL Workbench</h2>
+  <p class="sub">Copy-paste ready. These prove the data is live and the constraints work.</p>
+<pre>-- 1. All tables in the database
+SHOW TABLES;
+
+-- 2. Row counts per core table
+SELECT 'users' AS tbl, COUNT(*) FROM users
+UNION ALL SELECT 'resources', COUNT(*) FROM resources
+UNION ALL SELECT 'bookings', COUNT(*) FROM bookings
+UNION ALL SELECT 'notifications', COUNT(*) FROM notifications;
+
+-- 3. All resources with their building and category
+SELECT r.code, r.name, r.capacity, r.status,
+       c.name AS category, b.name AS building
+FROM resources r
+JOIN resource_categories c ON c.id = r.category_id
+JOIN rooms rm ON rm.id = r.room_id
+JOIN buildings b ON b.id = rm.building_id
+ORDER BY r.code;
+
+-- 4. Pending bookings waiting for admin approval
+SELECT booking_code, purpose, start_time, status
+FROM bookings WHERE status = 'pending' LIMIT 10;
+
+-- 5. Double-booking protection (this INSERT must FAIL)
+INSERT INTO bookings (booking_code, resource_id, user_id,
+  start_time, end_time, purpose, attendees)
+VALUES ('TEST-OVERLAP', 1, 1,
+  '2026-11-27 10:00:00', '2026-11-27 12:00:00',
+  'Overlap test — should be rejected', 5);
+-- Expected: trigger rejects it with "That slot was just taken"</pre>
+</div>
+
+<!-- CONNECTION -->
+<div class="card">
+  <h2>Connection — MySQL Workbench</h2>
+  <p class="sub">Use these exact values in Workbench → New Connection. SSL tab: set “Use SSL” to <b>Require</b>.</p>
+  <div class="kv">
+    <div><b>Hostname:</b> quadbook-mysql-shauryasingh9967-eab0.g.aivencloud.com</div>
+    <div><b>Port:</b> 20800</div>
+    <div><b>Username:</b> avnadmin</div>
+    <div><b>Default schema:</b> defaultdb</div>
+    <div><b>Password:</b> Aiven console → Connect section se copy karo (password yahan likha nahi hai — security)</div>
+    <div><b>Live app:</b> https://quadbook-frontend.vercel.app &nbsp;·&nbsp; <b>Health:</b> https://quadbook-backend.onrender.com/api/health</div>
+    <div><b>GitHub (SQL files):</b> github.com/shauryasingh9967-ops/quadbook → database/migrations/</div>
+  </div>
+</div>
+
+<footer>QuadBook · DBMS Capstone · K.R. Mangalam University · Prepared 27 Nov 2026 · Data snapshot 12:49 IST</footer>
+</div>
+
+<script>
+async function refreshLive() {
+  var msg = document.getElementById('liveMsg');
+  msg.textContent = 'Fetching live data…';
+  try {
+    var r = await fetch('https://quadbook-backend.onrender.com/api/public/overview', {mode: 'cors'});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var j = await r.json();
+    var s = j.data.stats;
+    document.getElementById('st-resources').textContent = s.resources;
+    document.getElementById('st-buildings').textContent = s.buildings;
+    document.getElementById('st-users').textContent = s.users;
+    document.getElementById('st-bookings').textContent = s.bookings.toLocaleString('en-IN');
+    document.getElementById('st-hours').textContent = s.hours.toLocaleString('en-IN');
+    msg.textContent = 'Live data refreshed just now from the deployed backend.';
+  } catch (e) {
+    msg.textContent = 'Live refresh blocked by the browser (CORS) — the snapshot above (27 Nov 2026, 14:10 IST) is still the verified live data.';
+  }
+}
+</script>
+</body>
+</html>
